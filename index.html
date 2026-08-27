@@ -1,30 +1,959 @@
-<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Control de Remesas</title>
-<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script><script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script><script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
-<style>body{font-family:Arial;margin:0;background:#f4f5f7;color:#17202a}header{background:#111827;color:#fff;padding:18px;text-align:center}main{max-width:760px;margin:auto;padding:16px}.card{background:#fff;border-radius:14px;padding:18px;margin:12px 0;box-shadow:0 2px 10px #0001}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}label{font-weight:700;font-size:14px}input,button{width:100%;padding:13px;margin-top:6px;border:1px solid #d1d5db;border-radius:9px;font-size:16px}button{background:#111827;color:#fff;border:0;font-weight:700}.secondary{background:#4b5563}.nav{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.hidden{display:none}.ok,.warn,.err{padding:14px;border-radius:10px;margin-top:10px}.ok{background:#ecfdf5;border:1px solid #a7f3d0}.warn{background:#fff7ed;border:1px solid #fed7aa}.err{background:#fef2f2;border:1px solid #fecaca}.big{font-size:22px;font-weight:800}.small{font-size:13px;color:#6b7280}table{width:100%;border-collapse:collapse}td,th{padding:9px;border-bottom:1px solid #eee;text-align:left}.barcode{text-align:center;border:1px dashed #aaa;padding:15px;margin-top:15px}@media(max-width:560px){.grid{grid-template-columns:1fr}.nav{grid-template-columns:1fr 1fr}}@media print{.no-print{display:none}}</style></head>
-<body><header><h1>🚚 CONTROL DE REMESAS</h1><div>Origen fijo: BOGOTÁ</div></header><main>
-<div id="login" class="card"><h2>Acceso</h2><p class="small">Sistema multiusuario.</p><input id="email" type="email" placeholder="Correo"><input id="pass" type="password" placeholder="Contraseña"><div class="grid"><button onclick="login()">Ingresar</button><button class="secondary" onclick="signup()">Crear cuenta</button></div><div id="loginMsg"></div></div>
-<div id="app" class="hidden"><div class="nav no-print"><button onclick="tab('new')">➕ Nueva</button><button onclick="tab('scan')">📷 Escanear</button><button onclick="tab('list')">📋 Remesas</button></div>
-<section id="new" class="card"><h2>Nueva remesa</h2><div class="grid"><div><label>Origen</label><input value="BOGOTÁ" readonly></div><div><label>Destino</label><input id="destino" placeholder="Ej. Medellín"></div><div><label>Número de productos</label><input id="cantidad" type="number" min="1" placeholder="35"></div><div><label># de remesa</label><input id="numero" placeholder="458721"></div></div><button onclick="crear()">Generar remesa</button><div id="newOut"></div></section>
-<section id="scan" class="card hidden"><h2>📷 Escanear carga</h2><div id="reader"></div><button onclick="scannerStart()" class="secondary no-print">Iniciar cámara</button><div id="scanOut"></div></section>
-<section id="list" class="card hidden"><h2>📋 Remesas</h2><div id="listOut"></div></section></div></main>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Control de Remesas</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.6/dist/JsBarcode.all.min.js"></script>
+
+<style>
+body{
+font-family:Arial,sans-serif;
+margin:0;
+background:#f4f5f7;
+color:#17202a
+}
+header{
+background:#111827;
+color:white;
+padding:18px;
+text-align:center
+}
+main{
+max-width:760px;
+margin:auto;
+padding:16px
+}
+.card{
+background:white;
+border-radius:14px;
+padding:18px;
+margin:12px 0;
+box-shadow:0 2px 10px #0001
+}
+.grid{
+display:grid;
+grid-template-columns:1fr 1fr;
+gap:12px
+}
+label{
+font-weight:bold;
+font-size:14px
+}
+input,button{
+width:100%;
+padding:13px;
+margin-top:6px;
+border:1px solid #d1d5db;
+border-radius:9px;
+font-size:16px;
+box-sizing:border-box
+}
+button{
+background:#111827;
+color:white;
+border:0;
+font-weight:bold
+}
+.secondary{
+background:#4b5563
+}
+.nav{
+display:grid;
+grid-template-columns:repeat(3,1fr);
+gap:8px
+}
+.hidden{
+display:none
+}
+.ok,.warn,.err{
+padding:14px;
+border-radius:10px;
+margin-top:10px
+}
+.ok{
+background:#ecfdf5;
+border:1px solid #a7f3d0
+}
+.warn{
+background:#fff7ed;
+border:1px solid #fed7aa
+}
+.err{
+background:#fef2f2;
+border:1px solid #fecaca
+}
+.big{
+font-size:22px;
+font-weight:800
+}
+.small{
+font-size:13px;
+color:#6b7280
+}
+table{
+width:100%;
+border-collapse:collapse
+}
+td,th{
+padding:9px;
+border-bottom:1px solid #eee;
+text-align:left
+}
+.barcode{
+text-align:center;
+border:1px dashed #aaa;
+padding:15px;
+margin-top:15px
+}
+@media(max-width:560px){
+.grid{
+grid-template-columns:1fr
+}
+.nav{
+grid-template-columns:1fr 1fr
+}
+}
+@media print{
+.no-print{
+display:none
+}
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🚚 CONTROL DE REMESAS</h1>
+<div>Origen fijo: BOGOTÁ</div>
+</header>
+
+<main>
+
+<!-- ACCESO -->
+
+<div id="login" class="card">
+
+<h2>Acceso multiusuario</h2>
+
+<p class="small">
+Ingresa con el correo y contraseña registrados en Firebase.
+</p>
+
+<input
+id="email"
+type="email"
+placeholder="Correo electrónico">
+
+<input
+id="pass"
+type="password"
+placeholder="Contraseña">
+
+<div class="grid">
+
+<button onclick="doLogin()">
+Ingresar
+</button>
+
+<button class="secondary" onclick="signup()">
+Crear cuenta
+</button>
+
+</div>
+
+<div id="loginMsg"></div>
+
+</div>
+
+
+<!-- APLICACIÓN -->
+
+<div id="app" class="hidden">
+
+<div class="nav no-print">
+
+<button onclick="tab('new')">
+➕ Nueva
+</button>
+
+<button onclick="tab('scan')">
+📷 Escanear
+</button>
+
+<button onclick="tab('list')">
+📋 Remesas
+</button>
+
+</div>
+
+
+<!-- NUEVA REMESA -->
+
+<section id="new" class="card">
+
+<h2>Nueva remesa</h2>
+
+<div class="grid">
+
+<div>
+
+<label>Origen</label>
+
+<input
+value="BOGOTÁ"
+readonly>
+
+</div>
+
+<div>
+
+<label>Destino</label>
+
+<input
+id="destino"
+placeholder="Ej. Medellín">
+
+</div>
+
+<div>
+
+<label>Número de productos</label>
+
+<input
+id="cantidad"
+type="number"
+min="1"
+placeholder="35">
+
+</div>
+
+<div>
+
+<label># de remesa</label>
+
+<input
+id="numero"
+placeholder="458721">
+
+</div>
+
+</div>
+
+<button
+onclick="crear()"
+style="margin-top:14px">
+
+Generar remesa
+
+</button>
+
+<div id="newOut"></div>
+
+</section>
+
+
+<!-- ESCANEAR -->
+
+<section id="scan" class="card hidden">
+
+<h2>📷 Escanear carga</h2>
+
+<div id="reader"></div>
+
+<button
+onclick="scannerStart()"
+class="secondary no-print">
+
+Iniciar cámara
+
+</button>
+
+<div id="scanOut"></div>
+
+</section>
+
+
+<!-- LISTA -->
+
+<section id="list" class="card hidden">
+
+<h2>📋 Remesas</h2>
+
+<div id="listOut"></div>
+
+</section>
+
+</div>
+
+</main>
+
+
 <script>
-const firebaseConfig={
-apiKey:"AIzaSyBvJ9PXJp1f51oNNIVhqY32V4Pr_bLO21o",
-authDomain:"control-remesas-9732c.firebaseapp.com",
-databaseURL:"https://control-remesas-9732c-default-rtdb.firebaseio.com/",
-projectId:"control-remesas-9732c",
-storageBucket:"control-remesas-9732c.firebasestorage.app",
-messagingSenderId:"1011135804059",
-appId:"1:1011135804059:web:5d4fae4c00c28fa4250c3e"
+
+/* FIREBASE */
+
+const firebaseConfig = {
+
+apiKey:
+"AIzaSyBvJ9PXJp1f51oNNIVhqY32V4Pr_bLO21o",
+
+authDomain:
+"control-remesas-9732c.firebaseapp.com",
+
+databaseURL:
+"https://control-remesas-9732c-default-rtdb.firebaseio.com/",
+
+projectId:
+"control-remesas-9732c",
+
+storageBucket:
+"control-remesas-9732c.firebasestorage.app",
+
+messagingSenderId:
+"1011135804059",
+
+appId:
+"1:1011135804059:web:5d4fae4c00c28fa4250c3e"
+
 };
-let db=null,auth=null,user=null,scanner=null;
-function init(){if(firebaseConfig.apiKey==="REEMPLAZAR")return;firebase.initializeApp(firebaseConfig);auth=firebase.auth();db=firebase.database();auth.onAuthStateChanged(u=>{user=u;login.classList.toggle("hidden",!!u);app.classList.toggle("hidden",!u);if(u)renderList()})}
-async function login(){if(!db){loginMsg.innerHTML='<div class="err">Configura Firebase primero.</div>';return}try{await auth.signInWithEmailAndPassword(email.value,pass.value)}catch(e){loginMsg.innerHTML='<div class="err">'+e.message+'</div>'}}
-async function signup(){if(!db){loginMsg.innerHTML='<div class="err">Configura Firebase primero.</div>';return}try{await auth.createUserWithEmailAndPassword(email.value,pass.value)}catch(e){loginMsg.innerHTML='<div class="err">'+e.message+'</div>'}}
-function tab(id){["new","scan","list"].forEach(x=>document.getElementById(x).classList.toggle("hidden",x!==id));if(id==="list")renderList()}
-async function crear(){let d=destino.value.trim(),q=+cantidad.value,n=numero.value.trim();if(!d||!q||!n){newOut.innerHTML='<div class="warn">Completa todos los campos.</div>';return}let s=await db.ref("remesas/"+n).get();if(s.exists()){newOut.innerHTML='<div class="err">Ese número ya existe.</div>';return}let codigos={};for(let i=1;i<=q;i++){let c=n+"-"+String(i).padStart(3,"0");codigos[c]={escaneado:false}}let r={numero:n,origen:"BOGOTÁ",destino:d,cantidad:q,creadaPor:user.email,fecha:Date.now(),codigos};await db.ref("remesas/"+n).set(r);newOut.innerHTML='<div class="ok"><div class="big">Remesa #'+n+'</div>BOGOTÁ → '+d+'<br>Productos: '+q+'</div><div class="barcode"><svg id="bc"></svg><div>'+n+'-001</div><button class="secondary no-print" onclick="print()">🖨️ Imprimir</button></div>';JsBarcode("#bc",n+"-001",{format:"CODE128",displayValue:true,height:70,width:2})}
-async function renderList(){if(!db){listOut.innerHTML='<p class="small">Firebase aún no está configurado.</p>';return}let s=await db.ref("remesas").get(),data=s.val()||{},rows="";Object.values(data).sort((a,b)=>b.fecha-a.fecha).forEach(r=>{let t=Object.keys(r.codigos||{}).length,e=Object.values(r.codigos||{}).filter(x=>x.escaneado).length;rows+='<tr><td>'+r.numero+'</td><td>'+r.destino+'</td><td>'+e+'/'+t+'</td></tr>'});listOut.innerHTML=rows?'<table><tr><th>Remesa</th><th>Destino</th><th>Avance</th></tr>'+rows+'</table>':'No hay remesas.'}
-function scannerStart(){if(!db){scanOut.innerHTML='<div class="err">Configura Firebase primero.</div>';return}scanner=new Html5Qrcode("reader");scanner.start({facingMode:"environment"},{fps:10,qrbox:{width:260,height:130}},async code=>{await scanCode(code);try{await scanner.stop()}catch(e){}},()=>{}).catch(e=>scanOut.innerHTML='<div class="err">No se pudo abrir la cámara. Usa HTTPS y permite la cámara.</div>')}
-async function scanCode(code){let n=code.split("-")[0],ref=db.ref("remesas/"+n),s=await ref.get();if(!s.exists()){scanOut.innerHTML='<div class="err">⚠️ Código no registrado: '+code+'</div>';return}let r=s.val();if(!r.codigos[code]){scanOut.innerHTML='<div class="warn">⚠️ Código no corresponde a esta remesa.</div>';return}if(!r.codigos[code].escaneado)await ref.child("codigos/"+code).update({escaneado:true,escaneadoPor:user.email,escaneadoEn:Date.now()});r=(await ref.get()).val();let e=Object.values(r.codigos).filter(x=>x.escaneado).length;scanOut.innerHTML='<div class="'+(e===r.cantidad?'ok':'warn')+'"><div class="big">🟢 Código válido</div>Remesa #'+r.numero+'<br>Origen: '+r.origen+'<br>Destino: '+r.destino+'<br>Productos: '+e+'/'+r.cantidad+'<br>'+(e===r.cantidad?'🟢 CARGA COMPLETA':'Faltan '+(r.cantidad-e)+' productos.')+'</div>'}
-init();
-</script></body></html>
+
+
+/* VARIABLES */
+
+let db = null;
+
+let auth = null;
+
+let user = null;
+
+let scanner = null;
+
+
+/* INICIAR FIREBASE */
+
+function initFirebase(){
+
+try{
+
+firebase.initializeApp(firebaseConfig);
+
+auth = firebase.auth();
+
+db = firebase.database();
+
+auth.onAuthStateChanged(function(u){
+
+user = u;
+
+document
+.getElementById("login")
+.classList
+.toggle("hidden",!!u);
+
+document
+.getElementById("app")
+.classList
+.toggle("hidden",!u);
+
+if(u){
+
+renderList();
+
+}
+
+});
+
+}catch(error){
+
+document.getElementById("loginMsg").innerHTML =
+'<div class="err">Error conectando con Firebase.</div>';
+
+}
+
+}
+
+
+/* INGRESAR */
+
+async function doLogin(){
+
+const emailEl =
+document.getElementById("email");
+
+const passEl =
+document.getElementById("pass");
+
+const msgEl =
+document.getElementById("loginMsg");
+
+
+if(!auth){
+
+msgEl.innerHTML =
+'<div class="err">Firebase no está conectado. Recarga la página.</div>';
+
+return;
+
+}
+
+
+if(
+!emailEl.value.trim() ||
+!passEl.value
+){
+
+msgEl.innerHTML =
+'<div class="warn">Escribe tu correo y contraseña.</div>';
+
+return;
+
+}
+
+
+try{
+
+await auth.signInWithEmailAndPassword(
+emailEl.value.trim(),
+passEl.value
+);
+
+msgEl.innerHTML = "";
+
+}catch(error){
+
+if(
+error.code ===
+"auth/invalid-credential"
+){
+
+msgEl.innerHTML =
+'<div class="err">Correo o contraseña incorrectos.</div>';
+
+}else{
+
+msgEl.innerHTML =
+'<div class="err">'+
+error.message+
+'</div>';
+
+}
+
+}
+
+}
+
+
+/* CREAR USUARIO */
+
+async function signup(){
+
+const emailEl =
+document.getElementById("email");
+
+const passEl =
+document.getElementById("pass");
+
+const msgEl =
+document.getElementById("loginMsg");
+
+
+if(!auth){
+
+msgEl.innerHTML =
+'<div class="err">Firebase no está conectado.</div>';
+
+return;
+
+}
+
+
+try{
+
+await auth.createUserWithEmailAndPassword(
+emailEl.value.trim(),
+passEl.value
+);
+
+msgEl.innerHTML =
+'<div class="ok">Cuenta creada correctamente.</div>';
+
+}catch(error){
+
+msgEl.innerHTML =
+'<div class="err">'+
+error.message+
+'</div>';
+
+}
+
+}
+
+
+/* CAMBIAR SECCIÓN */
+
+function tab(id){
+
+["new","scan","list"].forEach(function(x){
+
+document
+.getElementById(x)
+.classList
+.toggle("hidden",x !== id);
+
+});
+
+if(id === "list"){
+
+renderList();
+
+}
+
+}
+
+
+/* CREAR REMESA */
+
+async function crear(){
+
+const destino =
+document
+.getElementById("destino")
+.value
+.trim();
+
+const cantidad =
+Number(
+document
+.getElementById("cantidad")
+.value
+);
+
+const numero =
+document
+.getElementById("numero")
+.value
+.trim();
+
+
+if(
+!destino ||
+!cantidad ||
+!numero
+){
+
+document.getElementById("newOut").innerHTML =
+'<div class="warn">Completa todos los campos.</div>';
+
+return;
+
+}
+
+
+const ref =
+db.ref("remesas/"+numero);
+
+const existente =
+await ref.get();
+
+
+if(existente.exists()){
+
+document.getElementById("newOut").innerHTML =
+'<div class="err">Ese número de remesa ya existe.</div>';
+
+return;
+
+}
+
+
+const codigos = {};
+
+
+for(
+let i=1;
+i<=cantidad;
+i++
+){
+
+const codigo =
+numero+
+"-"+
+String(i).padStart(3,"0");
+
+codigos[codigo] = {
+
+escaneado:false
+
+};
+
+}
+
+
+const remesa = {
+
+numero:numero,
+
+origen:"BOGOTÁ",
+
+destino:destino,
+
+cantidad:cantidad,
+
+creadaPor:user.email,
+
+fecha:Date.now(),
+
+codigos:codigos
+
+};
+
+
+await ref.set(remesa);
+
+
+document.getElementById("newOut").innerHTML =
+
+'<div class="ok">'+
+
+'<div class="big">'+
+'Remesa #'+numero+
+'</div>'+
+
+'BOGOTÁ → '+destino+
+'<br>Productos: '+cantidad+
+
+'</div>'+
+
+'<div class="barcode">'+
+
+'<b>Etiqueta de ejemplo</b>'+
+
+'<svg id="bc"></svg>'+
+
+'<div>'+numero+'-001</div>'+
+
+'<button class="secondary no-print" onclick="window.print()">'+
+'🖨️ Imprimir'+
+'</button>'+
+
+'</div>';
+
+
+JsBarcode(
+"#bc",
+numero+"-001",
+{
+format:"CODE128",
+displayValue:true,
+height:70,
+width:2
+}
+);
+
+}
+
+
+/* LISTAR REMESAS */
+
+async function renderList(){
+
+if(!db){
+
+document.getElementById("listOut").innerHTML =
+'<p class="small">Firebase no está disponible.</p>';
+
+return;
+
+}
+
+
+const snap =
+await db.ref("remesas").get();
+
+const data =
+snap.val() || {};
+
+let rows = "";
+
+
+Object
+.values(data)
+.sort(function(a,b){
+
+return b.fecha-a.fecha;
+
+})
+.forEach(function(r){
+
+const total =
+Object.keys(r.codigos || {}).length;
+
+const escaneados =
+Object
+.values(r.codigos || {})
+.filter(function(x){
+
+return x.escaneado;
+
+})
+.length;
+
+
+rows +=
+
+'<tr>'+
+
+'<td>'+r.numero+'</td>'+
+
+'<td>'+r.destino+'</td>'+
+
+'<td>'+
+escaneados+
+'/'+
+total+
+'</td>'+
+
+'</tr>';
+
+});
+
+
+if(rows){
+
+document.getElementById("listOut").innerHTML =
+
+'<table>'+
+
+'<tr>'+
+'<th>Remesa</th>'+
+'<th>Destino</th>'+
+'<th>Avance</th>'+
+'</tr>'+
+
+rows+
+
+'</table>';
+
+}else{
+
+document.getElementById("listOut").innerHTML =
+"<p>No hay remesas.</p>";
+
+}
+
+}
+
+
+/* INICIAR ESCÁNER */
+
+function scannerStart(){
+
+if(!db){
+
+document.getElementById("scanOut").innerHTML =
+'<div class="err">Firebase no está conectado.</div>';
+
+return;
+
+}
+
+
+if(scanner){
+
+try{
+
+scanner.clear();
+
+}catch(e){}
+
+}
+
+
+scanner =
+new Html5Qrcode("reader");
+
+
+scanner.start(
+
+{facingMode:"environment"},
+
+{
+fps:10,
+qrbox:{
+width:260,
+height:130
+}
+},
+
+async function(code){
+
+await scanCode(code);
+
+try{
+
+await scanner.stop();
+
+}catch(e){}
+
+},
+
+function(errorMessage){}
+
+)
+
+.catch(function(error){
+
+document.getElementById("scanOut").innerHTML =
+
+'<div class="err">'+
+'No se pudo abrir la cámara. '+
+'Verifica el permiso de cámara y que estés usando HTTPS.'+
+'</div>';
+
+});
+
+}
+
+
+/* PROCESAR ESCANEO */
+
+async function scanCode(code){
+
+const numero =
+code.split("-")[0];
+
+
+const ref =
+db.ref("remesas/"+numero);
+
+
+const snap =
+await ref.get();
+
+
+if(!snap.exists()){
+
+document.getElementById("scanOut").innerHTML =
+
+'<div class="err">'+
+'⚠️ Código no registrado: '+
+code+
+'</div>';
+
+return;
+
+}
+
+
+let remesa =
+snap.val();
+
+
+if(!remesa.codigos[code]){
+
+document.getElementById("scanOut").innerHTML =
+
+'<div class="warn">'+
+'⚠️ El código no corresponde a esta remesa.'+
+'</div>';
+
+return;
+
+}
+
+
+if(
+!remesa.codigos[code].escaneado
+){
+
+await ref
+.child("codigos/"+code)
+.update({
+
+escaneado:true,
+
+escaneadoPor:user.email,
+
+escaneadoEn:Date.now()
+
+});
+
+}
+
+
+remesa =
+(await ref.get()).val();
+
+
+const escaneados =
+Object
+.values(remesa.codigos)
+.filter(function(x){
+
+return x.escaneado;
+
+})
+.length;
+
+
+const completa =
+escaneados === remesa.cantidad;
+
+
+document.getElementById("scanOut").innerHTML =
+
+'<div class="'+
+(completa ? "ok" : "warn")+
+'">'+
+
+'<div class="big">'+
+'🟢 Código válido'+
+'</div>'+
+
+'<b>Remesa #'+
+remesa.numero+
+'</b>'+
+
+'<br>Origen: '+
+remesa.origen+
+
+'<br>Destino: '+
+remesa.destino+
+
+'<br>Productos: '+
+escaneados+
+'/'+
+remesa.cantidad+
+
+'<br>'+
+
+(
+completa
+?
+'🟢 CARGA COMPLETA'
+:
+'Faltan '+
+(remesa.cantidad-escaneados)+
+' productos.'
+)+
+
+'</div>';
+
+}
+
+
+/* ARRANCAR */
+
+initFirebase();
+
+</script>
+
+</body>
+</html>
